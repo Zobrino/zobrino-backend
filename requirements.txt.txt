@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+openai
+google-cloud-translate
+azure-cognitiveservices-speech
+twilio
