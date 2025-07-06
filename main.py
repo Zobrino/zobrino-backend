@@ -30,6 +30,24 @@ async def translate_audio(req: CallRequest):
 
     except Exception as e:
         return {"error": str(e)}
+from fastapi.responses import Response
+
+@app.post("/", response_class=Response, media_type="application/xml")
+async def answer_call():
+    return """
+    <Response>
+        <Say voice="alice" language="es-ES">Gracias por llamar a Zobrino. Por favor, hable después del tono.</Say>
+        <Record 
+            maxLength="15"
+            timeout="2"
+            playBeep="true"
+            action="/translate"
+            method="POST"
+            trim="trim-silence" />
+        <Say voice="alice" language="es-ES">No se recibió ningún mensaje. Adiós.</Say>
+        <Hangup/>
+    </Response>
+    """
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000)
