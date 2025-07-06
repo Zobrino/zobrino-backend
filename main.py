@@ -36,16 +36,8 @@ from fastapi.responses import Response
 async def answer_call():
     return """
     <Response>
-        <Say voice="alice" language="es-ES">Gracias por llamar a Zobrino. Por favor, hable después del tono.</Say>
-        <Record 
-            maxLength="15"
-            timeout="2"
-            playBeep="true"
-            action="/translate"
-            method="POST"
-            trim="trim-silence" />
-        <Say voice="alice" language="es-ES">No se recibió ningún mensaje. Adiós.</Say>
-        <Hangup/>
+        <Say voice="alice" language="es-ES">Gracias por llamar a Zobrino...</Say>
+        ...
     </Response>
     """
 if __name__ == "__main__":
