@@ -32,8 +32,6 @@ async def translate_audio(req: CallRequest):
         return {"error": str(e)}
 from fastapi.responses import Response
 
-from fastapi.responses import Response
-
 @app.post("/translate", response_class=Response)
 async def answer_call():
     xml_content = """
