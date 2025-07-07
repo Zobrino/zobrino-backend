@@ -8,8 +8,39 @@ app = FastAPI()
 class CallRequest(BaseModel):
     audio_url: str
 
-@app.post("/translate")
-async def translate_audio(req: CallRequest):
+from fastapi import Request
+from fastapi.responses import Response
+import requests
+
+@app.post("/translate", response_class=Response)
+async def translate_audio(request: Request):
+    form = await request.form()
+    recording_url = form.get("RecordingUrl")
+    
+    if not recording_url:
+        xml_error = """
+        <Response>
+            <Say voice="alice" language="es-ES">No se recibió ningún audio.</Say>
+        </Response>
+        """
+        return Response(content=xml_error.strip(), media_type="application/xml")
+    
+    # Agrega .mp3 al final del RecordingUrl
+    audio_url = recording_url + ".mp3"
+
+    # Descarga el audio
+    audio_data = requests.get(audio_url).content
+    with open("temp_audio.mp3", "wb") as f:
+        f.write(audio_data)
+
+    # Aquí más adelante vendrá: transcribir → traducir → generar voz
+    xml_success = """
+    <Response>
+        <Say voice="alice" language="es-ES">Gracias. Su mensaje ha sido recibido.</Say>
+    </Response>
+    """
+    return Response(content=xml_success.strip(), media_type="application/xml")
+
     try:
         # 1. Descargar el archivo de audio desde la URL
         response = requests.get(req.audio_url)
