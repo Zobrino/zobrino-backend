@@ -1,16 +1,10 @@
+import os
 import requests
 import openai
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, Request
+from fastapi.responses import Response
 
 app = FastAPI()
-
-class CallRequest(BaseModel):
-    audio_url: str
-
-from fastapi import Request
-from fastapi.responses import Response
-import requests
 
 @app.post("/translate", response_class=Response)
 async def translate_audio(request: Request):
@@ -25,45 +19,39 @@ async def translate_audio(request: Request):
         """
         return Response(content=xml_error.strip(), media_type="application/xml")
     
-    # Agrega .mp3 al final del RecordingUrl
+    # Descargar el audio de Twilio (se debe agregar .mp3)
     audio_url = recording_url + ".mp3"
 
-    # Descarga el audio
-    audio_data = requests.get(audio_url).content
-    with open("temp_audio.mp3", "wb") as f:
-        f.write(audio_data)
-
-    # Aquí más adelante vendrá: transcribir → traducir → generar voz
-    xml_success = """
-    <Response>
-        <Say voice="alice" language="es-ES">Gracias. Su mensaje ha sido recibido.</Say>
-    </Response>
-    """
-    return Response(content=xml_success.strip(), media_type="application/xml")
-
     try:
-        # 1. Descargar el archivo de audio desde la URL
-        response = requests.get(req.audio_url)
-        if response.status_code != 200:
-            return {"error": "No se pudo descargar el audio"}
+        # Descarga el audio
+        audio_data = requests.get(audio_url).content
+        with open("temp_audio.mp3", "wb") as f:
+            f.write(audio_data)
 
-        with open("audio.mp3", "wb") as f:
-            f.write(response.content)
-
-        # 2. Transcripción con Whisper
-        with open("audio.mp3", "rb") as audio_file:
+        # Transcribir con Whisper
+        with open("temp_audio.mp3", "rb") as audio_file:
             transcript = openai.Audio.transcribe("whisper-1", audio_file)
+        
+        translated_text = transcript["text"]  # ← este es el texto que será traducido en la siguiente fase
 
-        return {
-            "translated_text": transcript["text"],
-            "voice_url": "https://example.com/audio.mp3"  # se actualizará en la siguiente etapa
-        }
+        # Respuesta provisional para confirmar que funcionó
+        xml_success = f"""
+        <Response>
+            <Say voice="alice" language="es-ES">Recibido. Usted dijo: {translated_text}</Say>
+        </Response>
+        """
+        return Response(content=xml_success.strip(), media_type="application/xml")
 
     except Exception as e:
-        return {"error": str(e)}
-from fastapi.responses import Response
+        xml_error = f"""
+        <Response>
+            <Say voice="alice" language="es-ES">Ocurrió un error: {str(e)}</Say>
+        </Response>
+        """
+        return Response(content=xml_error.strip(), media_type="application/xml")
 
-@app.post("/translate", response_class=Response)
+
+@app.post("/", response_class=Response)
 async def answer_call():
     xml_content = """
     <Response>
@@ -81,7 +69,7 @@ async def answer_call():
     """
     return Response(content=xml_content.strip(), media_type="application/xml")
 
+
 if __name__ == "__main__":
     import uvicorn
-   uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
-
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
