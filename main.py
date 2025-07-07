@@ -70,6 +70,10 @@ async def answer_call():
     return Response(content=xml_content.strip(), media_type="application/xml")
 
 
+@app.get("/ping")
+def ping():
+    return {"status": "ok", "message": "Zobrino backend activo"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
