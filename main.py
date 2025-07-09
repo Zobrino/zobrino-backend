@@ -19,17 +19,54 @@ async def translate_audio(request: Request):
         """
         return Response(content=xml_error.strip(), media_type="application/xml")
     
-    # Descargar el audio de Twilio (se debe agregar .mp3)
+    # Descargar el audio de Twilio (.mp3)
     audio_url = recording_url + ".mp3"
 
     try:
-        # Descarga el audio
         audio_data = requests.get(audio_url).content
         with open("temp_audio.mp3", "wb") as f:
             f.write(audio_data)
 
-        # Transcribir con Whisper
         with open("temp_audio.mp3", "rb") as audio_file:
             transcript = openai.Audio.transcribe("whisper-1", audio_file)
         
-        translated_text = transcript["text"]  # ← este es el texto que será traducido en la s_
+        translated_text = transcript["text"]
+
+        xml_success = f"""
+        <Response>
+            <Say voice="alice" language="es-ES">Recibido. Usted dijo: {translated_text}</Say>
+        </Response>
+        """
+        return Response(content=xml_success.strip(), media_type="application/xml")
+
+    except Exception as e:
+        xml_error = f"""
+        <Response>
+            <Say voice="alice" language="es-ES">Ocurrió un error: {str(e)}</Say>
+        </Response>
+        """
+        return Response(content=xml_error.strip(), media_type="application/xml")
+
+
+@app.post("/", response_class=Response)
+async def answer_call():
+    xml_content = """
+    <Response>
+        <Say voice="alice" language="es-ES">Gracias por llamar a Zobrino. Por favor, hable después del tono.</Say>
+        <Record
+            maxLength="15"
+            timeout="2"
+            playBeep="true"
+            action="/translate"
+            method="POST"
+            trim="trim-silence"/>
+        <Say voice="alice" language="es-ES">No se recibió ningún mensaje. Adiós.</Say>
+        <Hangup/>
+    </Response>
+    """
+    return Response(content=xml_content.strip(), media_type="application/xml")
+
+
+@app.get("/ping")
+def ping():
+    return {"status": "ok", "message": "Zobrino backend activo"}
