@@ -1,22 +1,22 @@
 FROM python:3.12-slim
 
-# Instalar dependencias del sistema necesarias
+# Instalar librerías necesarias del sistema
 RUN apt-get update && apt-get install -y \
     libsndfile1 \
     libuuid1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Crear directorio de trabajo
+# Establecer directorio de trabajo
 WORKDIR /app
 
-# Copiar todos los archivos al contenedor
+# Copiar todos los archivos del proyecto al contenedor
 COPY . .
 
-# Instalar dependencias de Python
+# Instalar las dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Exponer el puerto
+# Exponer el puerto que usará uvicorn
 EXPOSE 8000
 
-# Comando por defecto para iniciar el servidor
+# Comando para iniciar el servidor FastAPI
 CMD ["uvicorn", "main:app", "--host=0.0.0.0", "--port=8000"]
