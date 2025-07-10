@@ -45,4 +45,32 @@ async def translate_audio(request: Request):
         original_text = transcript["text"]
 
         # Traducción al inglés
-        translation = translate_client.translate(original_te
+        translation = translate_client.translate(original_text, target_language="en")
+        translated_text = translation["translatedText"]
+
+        # Generación de voz con Azure
+        output_file = "static/respuesta.mp3"
+        audio_config = AudioOutputConfig(filename=output_file)
+        synthesizer = SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+        synthesizer.speak_text_async(translated_text).get()
+
+        # Responder con la voz generada
+        xml_response = f"""
+        <Response>
+            <Play>https://zobrino-backend-production-503e1.up.railway.app/static/respuesta.mp3</Play>
+        </Response>
+        """
+        return Response(content=xml_response.strip(), media_type="application/xml")
+
+    except Exception as e:
+        return Response(content=f"""
+        <Response>
+            <Say voice="alice" language="es-ES">Error: {str(e)}</Say>
+        </Response>
+        """.strip(), media_type="application/xml")
+
+@app.post("/", response_class=Response)
+async def answer_call():
+    return Response(content="""
+    <Response>
+        <Say voice="alice" language=
