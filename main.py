@@ -19,7 +19,7 @@ translate_client = translate.Client.from_service_account_info(google_credentials
 AZURE_KEY = os.environ["AZURE_SPEECH_KEY"]
 AZURE_REGION = os.environ["AZURE_SPEECH_REGION"]
 speech_config = SpeechConfig(subscription=AZURE_KEY, region=AZURE_REGION)
-speech_config.speech_synthesis_voice_name = "es-MX-JorgeNeural"  # Voz masculina cálida y neutral
+speech_config.speech_synthesis_voice_name = "es-MX-JorgeNeural"
 
 @app.post("/translate", response_class=Response)
 async def translate_audio(request: Request):
@@ -32,7 +32,6 @@ async def translate_audio(request: Request):
             <Say voice="alice" language="es-ES">No se recibió audio.</Say>
         </Response>
         """.strip(), media_type="application/xml")
-uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
 
     try:
         audio_url = recording_url + ".mp3"
@@ -55,7 +54,6 @@ uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
         synthesizer = SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
         synthesizer.speak_text_async(translated_text).get()
 
-        # Responder con la voz generada
         xml_response = f"""
         <Response>
             <Play>https://zobrino-backend-production-503e1.up.railway.app/static/respuesta.mp3</Play>
@@ -84,3 +82,8 @@ async def answer_call():
 @app.get("/ping")
 def ping():
     return {"status": "ok", "message": "Zobrino backend activo"}
+
+# Esta línea debe ir siempre al final
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
