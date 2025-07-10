@@ -1,6 +1,6 @@
 fastapi
 uvicorn
+requests
 openai
 google-cloud-translate
 azure-cognitiveservices-speech
-twilio
