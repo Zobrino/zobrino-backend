@@ -32,6 +32,7 @@ async def translate_audio(request: Request):
             <Say voice="alice" language="es-ES">No se recibió audio.</Say>
         </Response>
         """.strip(), media_type="application/xml")
+uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
 
     try:
         audio_url = recording_url + ".mp3"
