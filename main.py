@@ -5,11 +5,15 @@ import json
 
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles  # <--- AÑADIDO
 from google.cloud import translate_v2 as translate
 from azure.cognitiveservices.speech import SpeechConfig, SpeechSynthesizer
 from azure.cognitiveservices.speech.audio import AudioOutputConfig
 
 app = FastAPI()
+
+# Montar carpeta static para servir archivos mp3 públicamente
+app.mount("/static", StaticFiles(directory="static"), name="static")  # <--- AÑADIDO
 
 # Configurar Google Translate
 google_credentials = json.loads(os.environ["GOOGLE_APPLICATION_CREDENTIALS_JSON"])
