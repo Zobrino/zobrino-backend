@@ -2,7 +2,6 @@ import os
 import requests
 import openai
 import json
-
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -10,10 +9,8 @@ from google.cloud import translate_v2 as translate
 from azure.cognitiveservices.speech import SpeechConfig, SpeechSynthesizer
 from azure.cognitiveservices.speech.audio import AudioOutputConfig
 
-# Crear la app de FastAPI
 app = FastAPI()
 
-# Montar carpeta static para servir archivos mp3 públicamente
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configurar Google Translate
@@ -24,47 +21,47 @@ translate_client = translate.Client.from_service_account_info(google_credentials
 AZURE_KEY = os.environ["AZURE_SPEECH_KEY"]
 AZURE_REGION = os.environ["AZURE_SPEECH_REGION"]
 speech_config = SpeechConfig(subscription=AZURE_KEY, region=AZURE_REGION)
-speech_config.speech_synthesis_voice_name = "es-MX-JorgeNeural"  # Voz cálida, neutral y clara
+speech_config.speech_synthesis_voice_name = "es-MX-JorgeNeural"
 
 @app.post("/translate", response_class=Response)
 async def translate_audio(request: Request):
-    form = await request.form()
-    recording_url = form.get("RecordingUrl")
+    try:
+        form = await request.form()
+        recording_url = form.get("RecordingUrl")
 
-    if not recording_url:
-        return Response(content="""
-<Response>
-    <Say voice="alice" language="es-ES">No se recibió audio.</Say>
-</Response>
-""", media_type="application/xml")
+        if not recording_url:
+            raise Exception("No se recibió URL de grabación")
 
-    # 1. Descargar el audio del usuario
-    audio_response = requests.get(recording_url)
-    with open("user_audio.wav", "wb") as f:
-        f.write(audio_response.content)
+        audio_response = requests.get(recording_url)
+        with open("user_audio.wav", "wb") as f:
+            f.write(audio_response.content)
 
-    # 2. Transcripción con Whisper (OpenAI)
-    with open("user_audio.wav", "rb") as audio_file:
-        transcript_response = openai.Audio.transcribe("whisper-1", audio_file)
-        texto_transcrito = transcript_response["text"]
+        with open("user_audio.wav", "rb") as audio_file:
+            transcript_response = openai.Audio.transcribe("whisper-1", audio_file)
+            texto_transcrito = transcript_response["text"]
 
-    # 3. Traducir el texto con Google Translate
-    resultado_traduccion = translate_client.translate(texto_transcrito, target_language="en")
-    texto_traducido = resultado_traduccion["translatedText"]
+        resultado_traduccion = translate_client.translate(texto_transcrito, target_language="en")
+        texto_traducido = resultado_traduccion["translatedText"]
 
-    # 4. Convertir texto traducido a voz con Azure y guardar en static/respuesta.mp3
-    audio_config = AudioOutputConfig(filename="static/respuesta.mp3")
-    synthesizer = SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
-    synthesizer.speak_text_async(texto_traducido).get()
+        audio_config = AudioOutputConfig(filename="static/respuesta.mp3")
+        synthesizer = SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+        synthesizer.speak_text_async(texto_traducido).get()
 
-    # 5. Responder a Twilio con XML que reproduce el MP3 generado
-    return Response(content=f"""
+        return Response(content=f"""
 <Response>
     <Play>https://web-production-503e1.up.railway.app/static/respuesta.mp3</Play>
 </Response>
 """, media_type="application/xml")
 
-# Solo para ejecución local
+    except Exception as e:
+        print("🔴 ERROR:", str(e))
+        return Response(content=f"""
+<Response>
+    <Say voice="alice" language="es-ES">Ocurrió un error inesperado: {str(e)}</Say>
+</Response>
+""", media_type="application/xml")
+
+# Local
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000)
