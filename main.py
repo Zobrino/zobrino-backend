@@ -29,4 +29,8 @@ async def translate_audio(request: Request):
     if not recording_url:
         return Response(content="""
         <Response>
-            <Say voice="alice" language="es-ES">No se recibió audio.</
+           return Response(content="""
+<Response>
+    <Say voice="alice" language="es-ES">No se recibió audio.</Say>
+</Response>
+""", media_type="application/xml")
