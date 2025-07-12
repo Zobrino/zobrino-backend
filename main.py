@@ -25,12 +25,27 @@ speech_config.speech_synthesis_voice_name = "es-MX-JorgeNeural"  # Voz masculina
 async def translate_audio(request: Request):
     form = await request.form()
     recording_url = form.get("RecordingUrl")
-    
+
     if not recording_url:
         return Response(content="""
-        <Response>
-           return Response(content="""
 <Response>
     <Say voice="alice" language="es-ES">No se recibió audio.</Say>
 </Response>
 """, media_type="application/xml")
+    
+    # Descargar el audio del usuario
+    audio_response = requests.get(recording_url)
+    with open("user_audio.wav", "wb") as f:
+        f.write(audio_response.content)
+
+    # Transcripción con Whisper (OpenAI)
+    with open("user_audio.wav", "rb") as audio_file:
+        transcript_response = openai.Audio.transcribe("whisper-1", audio_file)
+        texto_transcrito = transcript_response["text"]
+
+    # Traducir el texto
+    resultado_traduccion = translate_client.translate(texto_transcrito, target_language="en")
+    texto_traducido = resultado_traduccion["translatedText"]
+
+    # Convertir texto traducido a voz con Azure
+    output_path = "static/respuesta.mp3"
