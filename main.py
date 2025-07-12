@@ -6,7 +6,7 @@ import json
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
 from google.cloud import translate_v2 as translate
-from azure.cognitiveservices.speech import SpeechConfig, SpeechSynthesizer, AudioConfig
+from azure.cognitiveservices.speech import SpeechConfig, SpeechSynthesizer
 from azure.cognitiveservices.speech.audio import AudioOutputConfig
 
 app = FastAPI()
@@ -53,8 +53,13 @@ async def translate_audio(request: Request):
     synthesizer.speak_text_async(texto_traducido).get()
 
     # 5. Responder a Twilio con XML que reproduce el MP3 generado
-    return Response(content="""
+    return Response(content=f"""
 <Response>
     <Play>https://web-production-503e1.up.railway.app/static/respuesta.mp3</Play>
 </Response>
 """, media_type="application/xml")
+
+# Esto permite ejecutar localmente si lo deseas
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)
