@@ -19,7 +19,7 @@ translate_client = translate.Client.from_service_account_info(google_credentials
 AZURE_KEY = os.environ["AZURE_SPEECH_KEY"]
 AZURE_REGION = os.environ["AZURE_SPEECH_REGION"]
 speech_config = SpeechConfig(subscription=AZURE_KEY, region=AZURE_REGION)
-speech_config.speech_synthesis_voice_name = "es-MX-JorgeNeural"  # Voz masculina cálida y neutral
+speech_config.speech_synthesis_voice_name = "es-MX-JorgeNeural"  # Voz cálida, neutral y clara
 
 @app.post("/translate", response_class=Response)
 async def translate_audio(request: Request):
@@ -33,19 +33,28 @@ async def translate_audio(request: Request):
 </Response>
 """, media_type="application/xml")
     
-    # Descargar el audio del usuario
+    # 1. Descargar el audio del usuario
     audio_response = requests.get(recording_url)
     with open("user_audio.wav", "wb") as f:
         f.write(audio_response.content)
 
-    # Transcripción con Whisper (OpenAI)
+    # 2. Transcripción con Whisper (OpenAI)
     with open("user_audio.wav", "rb") as audio_file:
         transcript_response = openai.Audio.transcribe("whisper-1", audio_file)
         texto_transcrito = transcript_response["text"]
 
-    # Traducir el texto
+    # 3. Traducir el texto con Google Translate
     resultado_traduccion = translate_client.translate(texto_transcrito, target_language="en")
     texto_traducido = resultado_traduccion["translatedText"]
 
-    # Convertir texto traducido a voz con Azure
-    output_path = "static/respuesta.mp3"
+    # 4. Convertir texto traducido a voz con Azure y guardar en static/respuesta.mp3
+    audio_config = AudioOutputConfig(filename="static/respuesta.mp3")
+    synthesizer = SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+    synthesizer.speak_text_async(texto_traducido).get()
+
+    # 5. Responder a Twilio con XML que reproduce el MP3 generado
+    return Response(content="""
+<Response>
+    <Play>https://web-production-503e1.up.railway.app/static/respuesta.mp3</Play>
+</Response>
+""", media_type="application/xml")
